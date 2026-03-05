@@ -2,15 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>とべゴリラ風ゲーム</title>
+<title>飛べゴリラ風ゲーム</title>
 
 <style>
+
 body{
 margin:0;
 overflow:hidden;
-background:#87ceeb;
+background:linear-gradient(#87ceeb,#ccefff);
 font-family:sans-serif;
-text-align:center;
 }
 
 #game{
@@ -29,15 +29,20 @@ font-size:40px;
 
 .obstacle{
 position:absolute;
-width:40px;
-background:#2f4f4f;
+width:50px;
+background:#3a3a3a;
+}
+
+.banana{
+position:absolute;
+font-size:28px;
 }
 
 #score{
 position:absolute;
 top:20px;
 left:20px;
-font-size:24px;
+font-size:26px;
 color:white;
 }
 
@@ -49,7 +54,9 @@ transform:translate(-50%,-50%);
 font-size:40px;
 color:white;
 display:none;
+text-align:center;
 }
+
 </style>
 </head>
 
@@ -62,6 +69,7 @@ display:none;
 </div>
 
 <script>
+
 const gorilla = document.getElementById("gorilla")
 const game = document.getElementById("game")
 const scoreText = document.getElementById("score")
@@ -70,82 +78,113 @@ const message = document.getElementById("message")
 let y = 200
 let velocity = 0
 let gravity = 0.5
-let jump = -8
+let jump = -9
 
-let obstacles = []
-let score = 0
-let playing = true
+let obstacles=[]
+let bananas=[]
+
+let score=0
+let playing=true
 
 function createObstacle(){
 
 let gap = 180
-let topHeight = Math.random()*300 + 50
+let topHeight = Math.random()*300+50
 let bottomHeight = window.innerHeight - topHeight - gap
 
-let top = document.createElement("div")
-top.className = "obstacle"
-top.style.height = topHeight+"px"
-top.style.top = "0px"
-top.style.left = window.innerWidth+"px"
+let top=document.createElement("div")
+top.className="obstacle"
+top.style.height=topHeight+"px"
+top.style.top="0px"
+top.style.left=window.innerWidth+"px"
 
-let bottom = document.createElement("div")
-bottom.className = "obstacle"
-bottom.style.height = bottomHeight+"px"
-bottom.style.bottom = "0px"
-bottom.style.left = window.innerWidth+"px"
+let bottom=document.createElement("div")
+bottom.className="obstacle"
+bottom.style.height=bottomHeight+"px"
+bottom.style.bottom="0px"
+bottom.style.left=window.innerWidth+"px"
 
 game.appendChild(top)
 game.appendChild(bottom)
 
 obstacles.push({top,bottom,x:window.innerWidth})
+
+if(Math.random()<0.7){
+createBanana()
+}
+
+}
+
+function createBanana(){
+
+let banana=document.createElement("div")
+banana.className="banana"
+banana.innerHTML="🍌"
+
+let by = Math.random()*(window.innerHeight-200)+100
+
+banana.style.left=window.innerWidth+"px"
+banana.style.top=by+"px"
+
+game.appendChild(banana)
+
+bananas.push({banana,x:window.innerWidth,y:by})
+
 }
 
 function resetGame(){
 
 document.querySelectorAll(".obstacle").forEach(o=>o.remove())
+document.querySelectorAll(".banana").forEach(o=>o.remove())
 
 obstacles=[]
+bananas=[]
+
 y=200
 velocity=0
 score=0
+scoreText.textContent=0
+
 playing=true
 message.style.display="none"
 
 }
 
+function collide(a,b){
+return !(
+a.right < b.left ||
+a.left > b.right ||
+a.bottom < b.top ||
+a.top > b.bottom
+)
+}
+
 function gameLoop(){
 
-if(!playing)return
+if(!playing) return
 
-velocity+=gravity
-y+=velocity
+velocity += gravity
+y += velocity
 
-gorilla.style.top = y+"px"
+gorilla.style.top=y+"px"
 
 if(y>window.innerHeight || y<0){
 gameOver()
 }
 
+let gRect = gorilla.getBoundingClientRect()
+
 obstacles.forEach(o=>{
-o.x-=4
+
+o.x -=4
+
 o.top.style.left=o.x+"px"
 o.bottom.style.left=o.x+"px"
 
-let gRect = gorilla.getBoundingClientRect()
-let tRect = o.top.getBoundingClientRect()
-let bRect = o.bottom.getBoundingClientRect()
+let tRect=o.top.getBoundingClientRect()
+let bRect=o.bottom.getBoundingClientRect()
 
-if(
-!(gRect.right<tRect.left || 
-gRect.left>tRect.right || 
-gRect.bottom<tRect.top || 
-gRect.top>tRect.bottom)
-||
-!(gRect.right<bRect.left || 
-gRect.left>bRect.right || 
-gRect.bottom<bRect.top || 
-gRect.top>bRect.bottom)
-){
+if(collide(gRect,tRect) || collide(gRect,bRect)){
 gameOver()
 }
 
@@ -156,40 +195,61 @@ scoreText.textContent=score
 
 })
 
-obstacles = obstacles.filter(o=>o.x>-50)
+bananas.forEach((b,i)=>{
+
+b.x -=4
+b.banana.style.left=b.x+"px"
+
+let bRect=b.banana.getBoundingClientRect()
+
+if(collide(gRect,bRect)){
+
+score+=5
+scoreText.textContent=score
+
+b.banana.remove()
+bananas.splice(i,1)
+
+}
+
+})
+
+obstacles = obstacles.filter(o=>o.x>-60)
+bananas = bananas.filter(b=>b.x>-60)
 
 requestAnimationFrame(gameLoop)
 
 }
 
 function gameOver(){
+
 playing=false
 message.style.display="block"
+
 }
 
 setInterval(()=>{
-if(playing)createObstacle()
+if(playing) createObstacle()
 },2000)
 
-document.addEventListener("click",()=>{
+document.addEventListener("click",jumpAction)
+document.addEventListener("keydown",e=>{
+if(e.code=="Space") jumpAction()
+})
+
+function jumpAction(){
+
 if(!playing){
 resetGame()
 gameLoop()
 }
-velocity=jump
-})
 
-document.addEventListener("keydown",(e)=>{
-if(e.code=="Space"){
-if(!playing){
-resetGame()
-gameLoop()
+velocity = jump
+
 }
-velocity=jump
-}
-})
 
 gameLoop()
+
 </script>
 
 </body>
