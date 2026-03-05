@@ -2,15 +2,15 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>飛べゴリラ風ゲーム</title>
+<title>とべゴリラ風ゲーム</title>
 
 <style>
 
 body{
 margin:0;
 overflow:hidden;
-background:linear-gradient(#87ceeb,#ccefff);
 font-family:sans-serif;
+background:#87ceeb;
 }
 
 #game{
@@ -20,41 +20,69 @@ height:100vh;
 overflow:hidden;
 }
 
+/* 雲 */
+.cloud{
+position:absolute;
+font-size:40px;
+opacity:0.8;
+}
+
+/* ゴリラ */
 #gorilla{
 position:absolute;
 left:120px;
 top:200px;
-font-size:40px;
+font-size:48px;
 }
 
+/* 障害物 */
 .obstacle{
 position:absolute;
-width:50px;
-background:#3a3a3a;
+width:60px;
+background:#444;
 }
 
+/* バナナ */
 .banana{
 position:absolute;
-font-size:28px;
+font-size:30px;
 }
 
+/* スコア */
 #score{
 position:absolute;
 top:20px;
 left:20px;
-font-size:26px;
+font-size:28px;
+color:white;
+font-weight:bold;
+}
+
+#highscore{
+position:absolute;
+top:60px;
+left:20px;
+font-size:18px;
 color:white;
 }
 
+/* メッセージ */
 #message{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
+text-align:center;
 font-size:40px;
 color:white;
-display:none;
-text-align:center;
+}
+
+button{
+font-size:22px;
+padding:10px 20px;
+border:none;
+border-radius:8px;
+cursor:pointer;
 }
 
 </style>
@@ -63,45 +91,82 @@ text-align:center;
 <body>
 
 <div id="game">
+
 <div id="gorilla">🦍</div>
+
 <div id="score">0</div>
-<div id="message">GAME OVER<br>クリックで再スタート</div>
+<div id="highscore"></div>
+
+<div id="message">
+<div id="title">とべゴリラ風ゲーム</div>
+<br>
+<button onclick="startGame()">START</button>
+</div>
+
 </div>
 
 <script>
 
-const gorilla = document.getElementById("gorilla")
-const game = document.getElementById("game")
-const scoreText = document.getElementById("score")
-const message = document.getElementById("message")
+const gorilla=document.getElementById("gorilla")
+const game=document.getElementById("game")
+const scoreText=document.getElementById("score")
+const highText=document.getElementById("highscore")
+const message=document.getElementById("message")
 
-let y = 200
-let velocity = 0
-let gravity = 0.5
-let jump = -9
+let y=200
+let velocity=0
+let gravity=0.5
+let jump=-9
 
 let obstacles=[]
 let bananas=[]
+let clouds=[]
 
 let score=0
-let playing=true
+let playing=false
+
+let highscore=localStorage.getItem("gorillaHigh") || 0
+highText.textContent="HI "+highscore
+
+/* 雲 */
+
+function createCloud(){
+
+let c=document.createElement("div")
+c.className="cloud"
+c.innerHTML="☁"
+
+let cy=Math.random()*300
+
+c.style.top=cy+"px"
+c.style.left=window.innerWidth+"px"
+
+game.appendChild(c)
+
+clouds.push({c,x:window.innerWidth})
+
+}
+
+setInterval(createCloud,3000)
+
+/* 障害物 */
 
 function createObstacle(){
 
-let gap = 180
-let topHeight = Math.random()*300+50
-let bottomHeight = window.innerHeight - topHeight - gap
+let gap=200
+let topHeight=Math.random()*300+50
+let bottomHeight=window.innerHeight-topHeight-gap
 
 let top=document.createElement("div")
 top.className="obstacle"
 top.style.height=topHeight+"px"
-top.style.top="0px"
+top.style.top="0"
 top.style.left=window.innerWidth+"px"
 
 let bottom=document.createElement("div")
 bottom.className="obstacle"
 bottom.style.height=bottomHeight+"px"
-bottom.style.bottom="0px"
+bottom.style.bottom="0"
 bottom.style.left=window.innerWidth+"px"
 
 game.appendChild(top)
@@ -109,74 +174,112 @@ game.appendChild(bottom)
 
 obstacles.push({top,bottom,x:window.innerWidth})
 
-if(Math.random()<0.7){
+if(Math.random()<0.8){
 createBanana()
 }
 
 }
 
+/* バナナ */
+
 function createBanana(){
 
-let banana=document.createElement("div")
-banana.className="banana"
-banana.innerHTML="🍌"
+let b=document.createElement("div")
+b.className="banana"
+b.innerHTML="🍌"
 
-let by = Math.random()*(window.innerHeight-200)+100
+let by=Math.random()*(window.innerHeight-200)+100
 
-banana.style.left=window.innerWidth+"px"
-banana.style.top=by+"px"
+b.style.left=window.innerWidth+"px"
+b.style.top=by+"px"
 
-game.appendChild(banana)
+game.appendChild(b)
 
-bananas.push({banana,x:window.innerWidth,y:by})
+bananas.push({b,x:window.innerWidth})
 
 }
 
-function resetGame(){
+/* 衝突 */
 
-document.querySelectorAll(".obstacle").forEach(o=>o.remove())
-document.querySelectorAll(".banana").forEach(o=>o.remove())
+function collide(a,b){
+
+return !(
+a.right<b.left ||
+a.left>b.right ||
+a.bottom<b.top ||
+a.top>b.bottom
+)
+
+}
+
+/* ゲーム */
+
+function startGame(){
+
+message.style.display="none"
+
+document.querySelectorAll(".obstacle,.banana").forEach(e=>e.remove())
 
 obstacles=[]
 bananas=[]
 
-y=200
-velocity=0
 score=0
 scoreText.textContent=0
 
+y=200
+velocity=0
+
 playing=true
-message.style.display="none"
 
 }
 
-function collide(a,b){
-return !(
-a.right < b.left ||
-a.left > b.right ||
-a.bottom < b.top ||
-a.top > b.bottom
-)
+function gameOver(){
+
+playing=false
+
+if(score>highscore){
+
+highscore=score
+localStorage.setItem("gorillaHigh",highscore)
+
 }
 
-function gameLoop(){
+highText.textContent="HI "+highscore
 
-if(!playing) return
+message.innerHTML="GAME OVER<br>Score "+score+"<br><br><button onclick='startGame()'>RETRY</button>"
+message.style.display="block"
 
-velocity += gravity
-y += velocity
+}
+
+/* ループ */
+
+function loop(){
+
+velocity+=gravity
+y+=velocity
 
 gorilla.style.top=y+"px"
 
-if(y>window.innerHeight || y<0){
-gameOver()
-}
+let gRect=gorilla.getBoundingClientRect()
 
-let gRect = gorilla.getBoundingClientRect()
+/* 雲 */
+
+clouds.forEach(c=>{
+
+c.x-=1
+c.c.style.left=c.x+"px"
+
+})
+
+clouds=clouds.filter(c=>c.x>-50)
+
+/* 障害物 */
 
 obstacles.forEach(o=>{
 
-o.x -=4
+if(!playing)return
+
+o.x-=4
 
 o.top.style.left=o.x+"px"
 o.bottom.style.left=o.x+"px"
@@ -184,71 +287,81 @@ o.bottom.style.left=o.x+"px"
 let tRect=o.top.getBoundingClientRect()
 let bRect=o.bottom.getBoundingClientRect()
 
-if(collide(gRect,tRect) || collide(gRect,bRect)){
+if(collide(gRect,tRect)||collide(gRect,bRect)){
 gameOver()
 }
 
 if(o.x==120){
+
 score++
 scoreText.textContent=score
+
 }
 
 })
 
+obstacles=obstacles.filter(o=>o.x>-80)
+
+/* バナナ */
+
 bananas.forEach((b,i)=>{
 
-b.x -=4
-b.banana.style.left=b.x+"px"
+if(!playing)return
 
-let bRect=b.banana.getBoundingClientRect()
+b.x-=4
+b.b.style.left=b.x+"px"
 
-if(collide(gRect,bRect)){
+let rect=b.b.getBoundingClientRect()
+
+if(collide(gRect,rect)){
 
 score+=5
 scoreText.textContent=score
 
-b.banana.remove()
+b.b.remove()
 bananas.splice(i,1)
 
 }
 
 })
 
-obstacles = obstacles.filter(o=>o.x>-60)
-bananas = bananas.filter(b=>b.x>-60)
+bananas=bananas.filter(b=>b.x>-60)
 
-requestAnimationFrame(gameLoop)
+if(playing){
+
+if(y>window.innerHeight || y<0){
+gameOver()
+}
 
 }
 
-function gameOver(){
-
-playing=false
-message.style.display="block"
+requestAnimationFrame(loop)
 
 }
 
 setInterval(()=>{
-if(playing) createObstacle()
-},2000)
 
-document.addEventListener("click",jumpAction)
-document.addEventListener("keydown",e=>{
-if(e.code=="Space") jumpAction()
-})
+if(playing)createObstacle()
+
+},1800)
+
+/* 操作 */
 
 function jumpAction(){
 
-if(!playing){
-resetGame()
-gameLoop()
-}
+if(!playing)return
 
-velocity = jump
+velocity=jump
 
 }
 
-gameLoop()
+document.addEventListener("click",jumpAction)
+
+document.addEventListener("keydown",e=>{
+if(e.code==="Space")jumpAction()
+})
+
+loop()
 
 </script>
 
