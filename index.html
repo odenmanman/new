@@ -5,6 +5,7 @@
 <title>飛べゴリラ風ゲーム</title>
 
 <style>
+
 body{
     text-align:center;
     background:#87ceeb;
@@ -15,14 +16,14 @@ canvas{
     background:white;
     border:3px solid black;
 }
-</style>
 
+</style>
 </head>
 
 <body>
 
 <h2>飛べゴリラ風ゲーム</h2>
-<p>← → でゴリラを左右に移動</p>
+<p>← → で左右に移動</p>
 
 <canvas id="game" width="400" height="600"></canvas>
 
@@ -38,36 +39,35 @@ let gorilla = {
     y:520,
     size:40,
     targetX:200
-}
+};
 
-let obstacles=[];
-let bananas=[];
+let obstacles = [];
+let bananas = [];
 
-let baseSpeed = 2;
-let speed = baseSpeed;
+let speed = 2;
 
 function createObstacle(){
-    let x = Math.random()*(canvas.width-40);
+
+    if(obstacles.length >= 4) return;
 
     obstacles.push({
-        x:x,
+        x:Math.random()*(canvas.width-40),
         y:-40,
         size:40
     });
 }
 
 function createBanana(){
-    let x = Math.random()*(canvas.width-30);
 
     bananas.push({
-        x:x,
+        x:Math.random()*(canvas.width-30),
         y:-30,
         size:30
     });
 }
 
 setInterval(createObstacle,1200);
-setInterval(createBanana,2500);
+setInterval(createBanana,3000);
 
 document.addEventListener("keydown",e=>{
 
@@ -80,19 +80,25 @@ document.addEventListener("keydown",e=>{
     }
 
     if(gorilla.targetX<0) gorilla.targetX=0;
+
     if(gorilla.targetX>canvas.width-gorilla.size)
         gorilla.targetX=canvas.width-gorilla.size;
+
 });
 
 function update(){
 
     score++;
 
-    // ゴリラを滑らかに動かす
-    gorilla.x += (gorilla.targetX - gorilla.x)*0.2;
+    // スムーズ移動
+    gorilla.x += (gorilla.targetX - gorilla.x) * 0.15;
+
+    // ★ゆるやかなスピード上昇
+    speed = 2 + score / 5000;
 
     obstacles.forEach(o=>{
-        o.y+=speed;
+
+        o.y += speed;
 
         if(
             o.x < gorilla.x + gorilla.size &&
@@ -100,14 +106,13 @@ function update(){
             o.y < gorilla.y + gorilla.size &&
             o.y + o.size > gorilla.y
         ){
-            alert("ゲームオーバー！ スコア："+score);
-            location.reload();
+            gameOver();
         }
     });
 
     bananas.forEach((b,i)=>{
 
-        b.y+=speed;
+        b.y += speed;
 
         if(
             b.x < gorilla.x + gorilla.size &&
@@ -115,30 +120,30 @@ function update(){
             b.y < gorilla.y + gorilla.size &&
             b.y + b.size > gorilla.y
         ){
-            score+=100;
+            score += 100;
             bananas.splice(i,1);
         }
     });
 
-    obstacles = obstacles.filter(o=>o.y<canvas.height);
-    bananas = bananas.filter(b=>b.y<canvas.height);
-
-    // ★ゆるやかにスピードアップ
-    speed = baseSpeed + score/2000;
+    obstacles = obstacles.filter(o=>o.y < canvas.height);
+    bananas = bananas.filter(b=>b.y < canvas.height);
 }
 
 function draw(){
 
     ctx.clearRect(0,0,canvas.width,canvas.height);
 
+    // ゴリラ
     ctx.fillStyle="brown";
     ctx.fillRect(gorilla.x,gorilla.y,gorilla.size,gorilla.size);
 
+    // 障害物
     ctx.fillStyle="black";
     obstacles.forEach(o=>{
         ctx.fillRect(o.x,o.y,o.size,o.size);
     });
 
+    // バナナ
     ctx.fillStyle="yellow";
     bananas.forEach(b=>{
         ctx.beginPath();
@@ -152,9 +157,18 @@ function draw(){
 }
 
 function gameLoop(){
+
     update();
     draw();
+
     requestAnimationFrame(gameLoop);
+}
+
+function gameOver(){
+
+    alert("ゲームオーバー\nスコア："+score);
+    location.reload();
+
 }
 
 gameLoop();
