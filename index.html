@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>とべゴリラ風ゲーム</title>
+<title>ゴリラ回避ゲーム</title>
 
 <style>
 
@@ -20,61 +20,65 @@ height:100vh;
 overflow:hidden;
 }
 
-/* 雲 */
-.cloud{
-position:absolute;
-font-size:40px;
-opacity:0.8;
-}
-
 /* ゴリラ */
+
 #gorilla{
 position:absolute;
-left:120px;
-top:200px;
-font-size:48px;
+bottom:40px;
+left:50%;
+transform:translateX(-50%);
+font-size:50px;
 }
 
 /* 障害物 */
+
 .obstacle{
 position:absolute;
-width:60px;
-background:#444;
+font-size:40px;
 }
 
 /* バナナ */
+
 .banana{
 position:absolute;
-font-size:30px;
+font-size:35px;
+}
+
+/* 雲 */
+
+.cloud{
+position:absolute;
+font-size:40px;
+opacity:0.7;
 }
 
 /* スコア */
+
 #score{
 position:absolute;
 top:20px;
 left:20px;
-font-size:28px;
 color:white;
-font-weight:bold;
+font-size:28px;
 }
 
-#highscore{
+#high{
 position:absolute;
 top:60px;
 left:20px;
-font-size:18px;
 color:white;
 }
 
 /* メッセージ */
+
 #message{
 position:absolute;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
 text-align:center;
-font-size:40px;
 color:white;
+font-size:40px;
 }
 
 button{
@@ -95,11 +99,10 @@ cursor:pointer;
 <div id="gorilla">🦍</div>
 
 <div id="score">0</div>
-<div id="highscore"></div>
+<div id="high"></div>
 
 <div id="message">
-<div id="title">とべゴリラ風ゲーム</div>
-<br>
+ゴリラ回避ゲーム<br><br>
 <button onclick="startGame()">START</button>
 </div>
 
@@ -107,16 +110,14 @@ cursor:pointer;
 
 <script>
 
-const gorilla=document.getElementById("gorilla")
 const game=document.getElementById("game")
+const gorilla=document.getElementById("gorilla")
 const scoreText=document.getElementById("score")
-const highText=document.getElementById("highscore")
+const highText=document.getElementById("high")
 const message=document.getElementById("message")
 
-let y=200
-let velocity=0
-let gravity=0.5
-let jump=-9
+let gorillaX=window.innerWidth/2
+let speed=8
 
 let obstacles=[]
 let bananas=[]
@@ -125,8 +126,8 @@ let clouds=[]
 let score=0
 let playing=false
 
-let highscore=localStorage.getItem("gorillaHigh") || 0
-highText.textContent="HI "+highscore
+let high=localStorage.getItem("gorillaDodge") || 0
+highText.textContent="HI "+high
 
 /* 雲 */
 
@@ -136,45 +137,37 @@ let c=document.createElement("div")
 c.className="cloud"
 c.innerHTML="☁"
 
-let cy=Math.random()*300
+let x=Math.random()*window.innerWidth
 
-c.style.top=cy+"px"
-c.style.left=window.innerWidth+"px"
+c.style.left=x+"px"
+c.style.top="-50px"
 
 game.appendChild(c)
 
-clouds.push({c,x:window.innerWidth})
+clouds.push({c,y:-50})
 
 }
 
-setInterval(createCloud,3000)
+setInterval(createCloud,2000)
 
 /* 障害物 */
 
 function createObstacle(){
 
-let gap=200
-let topHeight=Math.random()*300+50
-let bottomHeight=window.innerHeight-topHeight-gap
+let o=document.createElement("div")
+o.className="obstacle"
+o.innerHTML="🧱"
 
-let top=document.createElement("div")
-top.className="obstacle"
-top.style.height=topHeight+"px"
-top.style.top="0"
-top.style.left=window.innerWidth+"px"
+let x=Math.random()*(window.innerWidth-40)
 
-let bottom=document.createElement("div")
-bottom.className="obstacle"
-bottom.style.height=bottomHeight+"px"
-bottom.style.bottom="0"
-bottom.style.left=window.innerWidth+"px"
+o.style.left=x+"px"
+o.style.top="-40px"
 
-game.appendChild(top)
-game.appendChild(bottom)
+game.appendChild(o)
 
-obstacles.push({top,bottom,x:window.innerWidth})
+obstacles.push({o,x,y:-40})
 
-if(Math.random()<0.8){
+if(Math.random()<0.6){
 createBanana()
 }
 
@@ -188,14 +181,14 @@ let b=document.createElement("div")
 b.className="banana"
 b.innerHTML="🍌"
 
-let by=Math.random()*(window.innerHeight-200)+100
+let x=Math.random()*(window.innerWidth-40)
 
-b.style.left=window.innerWidth+"px"
-b.style.top=by+"px"
+b.style.left=x+"px"
+b.style.top="-40px"
 
 game.appendChild(b)
 
-bananas.push({b,x:window.innerWidth})
+bananas.push({b,x,y:-40})
 
 }
 
@@ -212,7 +205,7 @@ a.top>b.bottom
 
 }
 
-/* ゲーム */
+/* ゲーム開始 */
 
 function startGame(){
 
@@ -226,25 +219,24 @@ bananas=[]
 score=0
 scoreText.textContent=0
 
-y=200
-velocity=0
-
 playing=true
 
 }
+
+/* ゲームオーバー */
 
 function gameOver(){
 
 playing=false
 
-if(score>highscore){
+if(score>high){
 
-highscore=score
-localStorage.setItem("gorillaHigh",highscore)
+high=score
+localStorage.setItem("gorillaDodge",high)
 
 }
 
-highText.textContent="HI "+highscore
+highText.textContent="HI "+high
 
 message.innerHTML="GAME OVER<br>Score "+score+"<br><br><button onclick='startGame()'>RETRY</button>"
 message.style.display="block"
@@ -255,10 +247,9 @@ message.style.display="block"
 
 function loop(){
 
-velocity+=gravity
-y+=velocity
+/* ゴリラ位置 */
 
-gorilla.style.top=y+"px"
+gorilla.style.left=gorillaX+"px"
 
 let gRect=gorilla.getBoundingClientRect()
 
@@ -266,12 +257,12 @@ let gRect=gorilla.getBoundingClientRect()
 
 clouds.forEach(c=>{
 
-c.x-=1
-c.c.style.left=c.x+"px"
+c.y+=1
+c.c.style.top=c.y+"px"
 
 })
 
-clouds=clouds.filter(c=>c.x>-50)
+clouds=clouds.filter(c=>c.y<window.innerHeight)
 
 /* 障害物 */
 
@@ -279,28 +270,28 @@ obstacles.forEach(o=>{
 
 if(!playing)return
 
-o.x-=4
+o.y+=5
 
-o.top.style.left=o.x+"px"
-o.bottom.style.left=o.x+"px"
+o.o.style.top=o.y+"px"
 
-let tRect=o.top.getBoundingClientRect()
-let bRect=o.bottom.getBoundingClientRect()
+let rect=o.o.getBoundingClientRect()
 
-if(collide(gRect,tRect)||collide(gRect,bRect)){
+if(collide(gRect,rect)){
 gameOver()
 }
 
-if(o.x==120){
+if(o.y>window.innerHeight){
 
 score++
 scoreText.textContent=score
+
+o.o.remove()
 
 }
 
 })
 
-obstacles=obstacles.filter(o=>o.x>-80)
+obstacles=obstacles.filter(o=>o.y<window.innerHeight)
 
 /* バナナ */
 
@@ -308,8 +299,8 @@ bananas.forEach((b,i)=>{
 
 if(!playing)return
 
-b.x-=4
-b.b.style.left=b.x+"px"
+b.y+=5
+b.b.style.top=b.y+"px"
 
 let rect=b.b.getBoundingClientRect()
 
@@ -325,15 +316,7 @@ bananas.splice(i,1)
 
 })
 
-bananas=bananas.filter(b=>b.x>-60)
-
-if(playing){
-
-if(y>window.innerHeight || y<0){
-gameOver()
-}
-
-}
+bananas=bananas.filter(b=>b.y<window.innerHeight)
 
 requestAnimationFrame(loop)
 
@@ -343,22 +326,32 @@ setInterval(()=>{
 
 if(playing)createObstacle()
 
-},1800)
+},1200)
 
 /* 操作 */
 
-function jumpAction(){
+document.addEventListener("keydown",e=>{
 
-if(!playing)return
-
-velocity=jump
-
+if(e.key==="ArrowLeft"){
+gorillaX-=speed
 }
 
-document.addEventListener("click",jumpAction)
+if(e.key==="ArrowRight"){
+gorillaX+=speed
+}
 
-document.addEventListener("keydown",e=>{
-if(e.code==="Space")jumpAction()
+})
+
+document.addEventListener("click",e=>{
+
+let x=e.clientX
+
+if(x<window.innerWidth/2){
+gorillaX-=speed*2
+}else{
+gorillaX+=speed*2
+}
+
 })
 
 loop()
