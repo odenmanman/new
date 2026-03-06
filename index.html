@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ゴリラ回避ゲーム HARD</title>
+<title>ゴリラ回避ゲーム HARD+</title>
 
 <style>
 
@@ -23,26 +23,18 @@ overflow:hidden;
 #gorilla{
 position:absolute;
 bottom:40px;
-left:50%;
-transform:translateX(-50%);
 font-size:52px;
 }
-
-/* 障害物 */
 
 .obstacle{
 position:absolute;
 font-size:38px;
 }
 
-/* バナナ */
-
 .banana{
 position:absolute;
 font-size:34px;
 }
-
-/* UI */
 
 #score{
 position:absolute;
@@ -50,12 +42,18 @@ top:20px;
 left:20px;
 color:white;
 font-size:28px;
-font-weight:bold;
+}
+
+#level{
+position:absolute;
+top:60px;
+left:20px;
+color:white;
 }
 
 #high{
 position:absolute;
-top:60px;
+top:90px;
 left:20px;
 color:white;
 }
@@ -75,7 +73,6 @@ font-size:22px;
 padding:10px 20px;
 border:none;
 border-radius:8px;
-cursor:pointer;
 }
 
 </style>
@@ -88,6 +85,7 @@ cursor:pointer;
 <div id="gorilla">🦍</div>
 
 <div id="score">0</div>
+<div id="level">LEVEL 1</div>
 <div id="high"></div>
 
 <div id="message">
@@ -100,8 +98,8 @@ GORILLA DODGE<br><br>
 <script>
 
 const gorilla=document.getElementById("gorilla")
-const game=document.getElementById("game")
 const scoreText=document.getElementById("score")
+const levelText=document.getElementById("level")
 const highText=document.getElementById("high")
 const message=document.getElementById("message")
 
@@ -118,18 +116,19 @@ let obstacles=[]
 let bananas=[]
 
 let score=0
+let level=1
 let playing=false
 
-let speed=4
+let fallSpeed=4
+let spawnRate=800
+let spawnTimer
 
-let high=localStorage.getItem("gorillaHard") || 0
+let high=localStorage.getItem("gorillaExtreme") || 0
 highText.textContent="HI "+high
-
-/* 障害物 */
 
 function createObstacle(){
 
-let count=Math.floor(Math.random()*3)+2
+let count=Math.floor(Math.random()*level)+2
 
 for(let i=0;i<count;i++){
 
@@ -142,7 +141,7 @@ let ox=Math.random()*(window.innerWidth-40)
 o.style.left=ox+"px"
 o.style.top="-40px"
 
-game.appendChild(o)
+document.getElementById("game").appendChild(o)
 
 obstacles.push({o,x:ox,y:-40})
 
@@ -153,8 +152,6 @@ createBanana()
 }
 
 }
-
-/* バナナ */
 
 function createBanana(){
 
@@ -167,13 +164,11 @@ let bx=Math.random()*(window.innerWidth-40)
 b.style.left=bx+"px"
 b.style.top="-40px"
 
-game.appendChild(b)
+document.getElementById("game").appendChild(b)
 
 bananas.push({b,x:bx,y:-40})
 
 }
-
-/* 衝突 */
 
 function collide(a,b){
 
@@ -186,8 +181,6 @@ a.top>b.bottom
 
 }
 
-/* スタート */
-
 function startGame(){
 
 document.querySelectorAll(".obstacle,.banana").forEach(e=>e.remove())
@@ -196,26 +189,35 @@ obstacles=[]
 bananas=[]
 
 score=0
-speed=4
+level=1
+fallSpeed=4
+spawnRate=800
 
 scoreText.textContent=0
+levelText.textContent="LEVEL 1"
 
 message.style.display="none"
 
 playing=true
 
-}
+clearInterval(spawnTimer)
 
-/* ゲームオーバー */
+spawnTimer=setInterval(()=>{
+if(playing)createObstacle()
+},spawnRate)
+
+}
 
 function gameOver(){
 
 playing=false
 
+clearInterval(spawnTimer)
+
 if(score>high){
 
 high=score
-localStorage.setItem("gorillaHard",high)
+localStorage.setItem("gorillaExtreme",high)
 
 }
 
@@ -226,19 +228,26 @@ message.style.display="block"
 
 }
 
-/* ループ */
+function levelUp(){
+
+level++
+levelText.textContent="LEVEL "+level
+
+fallSpeed+=1
+spawnRate*=0.9
+
+clearInterval(spawnTimer)
+
+spawnTimer=setInterval(()=>{
+if(playing)createObstacle()
+},spawnRate)
+
+}
 
 function loop(){
 
-/* スムーズ移動 */
-
-if(moveLeft){
-velocity-=accel
-}
-
-if(moveRight){
-velocity+=accel
-}
+if(moveLeft) velocity-=accel
+if(moveRight) velocity+=accel
 
 velocity*=friction
 
@@ -247,21 +256,18 @@ if(velocity<-maxSpeed) velocity=-maxSpeed
 
 x+=velocity
 
-if(x<0) x=0
-if(x>window.innerWidth-40) x=window.innerWidth-40
+if(x<0)x=0
+if(x>window.innerWidth-40)x=window.innerWidth-40
 
 gorilla.style.left=x+"px"
 
 let gRect=gorilla.getBoundingClientRect()
 
-/* 障害物 */
-
 obstacles.forEach(o=>{
 
-if(!playing) return
+if(!playing)return
 
-o.y+=speed
-
+o.y+=fallSpeed
 o.o.style.top=o.y+"px"
 
 let rect=o.o.getBoundingClientRect()
@@ -275,6 +281,10 @@ if(o.y>window.innerHeight){
 score++
 scoreText.textContent=score
 
+if(score%15==0){
+levelUp()
+}
+
 o.o.remove()
 
 }
@@ -283,13 +293,11 @@ o.o.remove()
 
 obstacles=obstacles.filter(o=>o.y<window.innerHeight)
 
-/* バナナ */
-
 bananas.forEach((b,i)=>{
 
 if(!playing)return
 
-b.y+=speed
+b.y+=fallSpeed
 b.b.style.top=b.y+"px"
 
 let rect=b.b.getBoundingClientRect()
@@ -308,50 +316,28 @@ bananas.splice(i,1)
 
 bananas=bananas.filter(b=>b.y<window.innerHeight)
 
-/* 難易度上昇 */
-
-if(playing){
-speed+=0.0005
-}
-
 requestAnimationFrame(loop)
 
 }
 
-/* 障害物発生 */
-
-setInterval(()=>{
-
-if(playing)createObstacle()
-
-},700)
-
-/* 操作 */
-
 document.addEventListener("keydown",e=>{
-
 if(e.key==="ArrowLeft") moveLeft=true
 if(e.key==="ArrowRight") moveRight=true
-
 })
 
 document.addEventListener("keyup",e=>{
-
 if(e.key==="ArrowLeft") moveLeft=false
 if(e.key==="ArrowRight") moveRight=false
-
 })
 
 document.addEventListener("click",e=>{
-
-if(e.clientX < window.innerWidth/2){
+if(e.clientX<window.innerWidth/2){
 moveLeft=true
 setTimeout(()=>moveLeft=false,100)
 }else{
 moveRight=true
 setTimeout(()=>moveRight=false,100)
 }
-
 })
 
 loop()
