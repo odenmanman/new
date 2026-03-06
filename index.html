@@ -2,19 +2,77 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>飛べゴリラ風ゲーム</title>
+<title>ゴリラ回避ゲーム EXTREME</title>
 
 <style>
 
 body{
-    text-align:center;
-    background:#87ceeb;
-    font-family:sans-serif;
+margin:0;
+overflow:hidden;
+background:#87ceeb;
+font-family:sans-serif;
 }
 
-canvas{
-    background:white;
-    border:3px solid black;
+#game{
+position:relative;
+width:100vw;
+height:100vh;
+overflow:hidden;
+}
+
+#gorilla{
+position:absolute;
+bottom:40px;
+font-size:52px;
+}
+
+.obstacle{
+position:absolute;
+font-size:38px;
+}
+
+.banana{
+position:absolute;
+font-size:34px;
+}
+
+#score{
+position:absolute;
+top:20px;
+left:20px;
+color:white;
+font-size:28px;
+}
+
+#level{
+position:absolute;
+top:60px;
+left:20px;
+color:white;
+}
+
+#high{
+position:absolute;
+top:90px;
+left:20px;
+color:white;
+}
+
+#message{
+position:absolute;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+text-align:center;
+color:white;
+font-size:40px;
+}
+
+button{
+font-size:22px;
+padding:10px 20px;
+border:none;
+border-radius:8px;
 }
 
 </style>
@@ -22,156 +80,276 @@ canvas{
 
 <body>
 
-<h2>飛べゴリラ風ゲーム</h2>
-<p>← → で左右に移動</p>
+<div id="game">
 
-<canvas id="game" width="400" height="600"></canvas>
+<div id="gorilla">🦍</div>
+
+<div id="score">0</div>
+<div id="level">LEVEL 1</div>
+<div id="high"></div>
+
+<div id="message">
+GORILLA DODGE<br><br>
+<button onclick="startGame()">START</button>
+</div>
+
+</div>
 
 <script>
 
-const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+const gorilla=document.getElementById("gorilla")
+const scoreText=document.getElementById("score")
+const levelText=document.getElementById("level")
+const highText=document.getElementById("high")
+const message=document.getElementById("message")
 
-let score = 0;
+let x=window.innerWidth/2
 
-let gorilla = {
-    x:200,
-    y:520,
-    size:40,
-    targetX:200
-};
+let velocity=0
+let accel=0.8
+let friction=0.9
+let maxSpeed=12
 
-let obstacles = [];
-let bananas = [];
+let moveLeft=false
+let moveRight=false
 
-let speed = 2;
+let obstacles=[]
+let bananas=[]
+
+let score=0
+let level=1
+let playing=false
+
+let fallSpeed=4
+let spawnRate=900
+
+let spawnTimer
+let scoreTimer
+
+let high=localStorage.getItem("gorillaExtreme") || 0
+highText.textContent="HI "+high
 
 function createObstacle(){
 
-    if(obstacles.length >= 4) return;
+let count=Math.floor(Math.random()*level)+2
 
-    obstacles.push({
-        x:Math.random()*(canvas.width-40),
-        y:-40,
-        size:40
-    });
+for(let i=0;i<count;i++){
+
+let o=document.createElement("div")
+o.className="obstacle"
+o.innerHTML="🧱"
+
+let ox=Math.random()*(window.innerWidth-40)
+
+o.style.left=ox+"px"
+o.style.top="-40px"
+
+game.appendChild(o)
+
+obstacles.push({o,x:ox,y:-40})
+
+}
+
+if(Math.random()<0.5){
+createBanana()
+}
+
 }
 
 function createBanana(){
 
-    bananas.push({
-        x:Math.random()*(canvas.width-30),
-        y:-30,
-        size:30
-    });
+let b=document.createElement("div")
+b.className="banana"
+b.innerHTML="🍌"
+
+let bx=Math.random()*(window.innerWidth-40)
+
+b.style.left=bx+"px"
+b.style.top="-40px"
+
+game.appendChild(b)
+
+bananas.push({b,x:bx,y:-40})
+
 }
 
-setInterval(createObstacle,1200);
-setInterval(createBanana,3000);
+function collide(a,b){
 
-document.addEventListener("keydown",e=>{
+return !(
+a.right<b.left ||
+a.left>b.right ||
+a.bottom<b.top ||
+a.top>b.bottom
+)
 
-    if(e.key==="ArrowLeft"){
-        gorilla.targetX -=60;
-    }
-
-    if(e.key==="ArrowRight"){
-        gorilla.targetX +=60;
-    }
-
-    if(gorilla.targetX<0) gorilla.targetX=0;
-
-    if(gorilla.targetX>canvas.width-gorilla.size)
-        gorilla.targetX=canvas.width-gorilla.size;
-
-});
-
-function update(){
-
-    score++;
-
-    // スムーズ移動
-    gorilla.x += (gorilla.targetX - gorilla.x) * 0.15;
-
-    // ★ゆるやかなスピード上昇
-    speed = 2 + score / 5000;
-
-    obstacles.forEach(o=>{
-
-        o.y += speed;
-
-        if(
-            o.x < gorilla.x + gorilla.size &&
-            o.x + o.size > gorilla.x &&
-            o.y < gorilla.y + gorilla.size &&
-            o.y + o.size > gorilla.y
-        ){
-            gameOver();
-        }
-    });
-
-    bananas.forEach((b,i)=>{
-
-        b.y += speed;
-
-        if(
-            b.x < gorilla.x + gorilla.size &&
-            b.x + b.size > gorilla.x &&
-            b.y < gorilla.y + gorilla.size &&
-            b.y + b.size > gorilla.y
-        ){
-            score += 100;
-            bananas.splice(i,1);
-        }
-    });
-
-    obstacles = obstacles.filter(o=>o.y < canvas.height);
-    bananas = bananas.filter(b=>b.y < canvas.height);
 }
 
-function draw(){
+function startGame(){
 
-    ctx.clearRect(0,0,canvas.width,canvas.height);
+document.querySelectorAll(".obstacle,.banana").forEach(e=>e.remove())
 
-    // ゴリラ
-    ctx.fillStyle="brown";
-    ctx.fillRect(gorilla.x,gorilla.y,gorilla.size,gorilla.size);
+obstacles=[]
+bananas=[]
 
-    // 障害物
-    ctx.fillStyle="black";
-    obstacles.forEach(o=>{
-        ctx.fillRect(o.x,o.y,o.size,o.size);
-    });
+score=0
+level=1
+fallSpeed=4
+spawnRate=900
 
-    // バナナ
-    ctx.fillStyle="yellow";
-    bananas.forEach(b=>{
-        ctx.beginPath();
-        ctx.arc(b.x+15,b.y+15,15,0,Math.PI*2);
-        ctx.fill();
-    });
+scoreText.textContent=0
+levelText.textContent="LEVEL 1"
 
-    ctx.fillStyle="black";
-    ctx.font="20px sans-serif";
-    ctx.fillText("Score: "+score,10,30);
+message.style.display="none"
+
+playing=true
+
+clearInterval(spawnTimer)
+clearInterval(scoreTimer)
+
+spawnTimer=setInterval(()=>{
+if(playing)createObstacle()
+},spawnRate)
+
+/* 生きているだけでスコア */
+
+scoreTimer=setInterval(()=>{
+
+if(!playing)return
+
+score++
+
+scoreText.textContent=score
+
+if(score%10==0){
+levelUp()
 }
 
-function gameLoop(){
+},100)
 
-    update();
-    draw();
-
-    requestAnimationFrame(gameLoop);
 }
 
 function gameOver(){
 
-    alert("ゲームオーバー\nスコア："+score);
-    location.reload();
+playing=false
+
+clearInterval(spawnTimer)
+clearInterval(scoreTimer)
+
+if(score>high){
+
+high=score
+localStorage.setItem("gorillaExtreme",high)
 
 }
 
-gameLoop();
+highText.textContent="HI "+high
+
+message.innerHTML="GAME OVER<br>Score "+score+"<br><br><button onclick='startGame()'>RETRY</button>"
+message.style.display="block"
+
+}
+
+function levelUp(){
+
+level++
+
+levelText.textContent="LEVEL "+level
+
+fallSpeed+=1
+spawnRate*=0.85
+
+clearInterval(spawnTimer)
+
+spawnTimer=setInterval(()=>{
+if(playing)createObstacle()
+},spawnRate)
+
+}
+
+function loop(){
+
+if(moveLeft) velocity-=accel
+if(moveRight) velocity+=accel
+
+velocity*=friction
+
+if(velocity>maxSpeed) velocity=maxSpeed
+if(velocity<-maxSpeed) velocity=-maxSpeed
+
+x+=velocity
+
+if(x<0)x=0
+if(x>window.innerWidth-40)x=window.innerWidth-40
+
+gorilla.style.left=x+"px"
+
+let gRect=gorilla.getBoundingClientRect()
+
+obstacles.forEach(o=>{
+
+if(!playing)return
+
+o.y+=fallSpeed
+o.o.style.top=o.y+"px"
+
+let rect=o.o.getBoundingClientRect()
+
+if(collide(gRect,rect)){
+gameOver()
+}
+
+})
+
+obstacles=obstacles.filter(o=>o.y<window.innerHeight)
+
+bananas.forEach((b,i)=>{
+
+if(!playing)return
+
+b.y+=fallSpeed
+b.b.style.top=b.y+"px"
+
+let rect=b.b.getBoundingClientRect()
+
+if(collide(gRect,rect)){
+
+score+=5
+scoreText.textContent=score
+
+b.b.remove()
+bananas.splice(i,1)
+
+}
+
+})
+
+bananas=bananas.filter(b=>b.y<window.innerHeight)
+
+requestAnimationFrame(loop)
+
+}
+
+document.addEventListener("keydown",e=>{
+if(e.key==="ArrowLeft") moveLeft=true
+if(e.key==="ArrowRight") moveRight=true
+})
+
+document.addEventListener("keyup",e=>{
+if(e.key==="ArrowLeft") moveLeft=false
+if(e.key==="ArrowRight") moveRight=false
+})
+
+document.addEventListener("click",e=>{
+if(e.clientX<window.innerWidth/2){
+moveLeft=true
+setTimeout(()=>moveLeft=false,100)
+}else{
+moveRight=true
+setTimeout(()=>moveRight=false,100)
+}
+})
+
+loop()
 
 </script>
 
