@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ゴリラ回避ゲーム EXTREME</title>
+<title>ゴリラ回避ゲーム</title>
 
 <style>
 
@@ -97,6 +97,7 @@ GORILLA DODGE<br><br>
 
 <script>
 
+const game=document.getElementById("game")
 const gorilla=document.getElementById("gorilla")
 const scoreText=document.getElementById("score")
 const levelText=document.getElementById("level")
@@ -124,7 +125,6 @@ let fallSpeed=4
 let spawnRate=900
 
 let spawnTimer
-let scoreTimer
 
 let high=localStorage.getItem("gorillaExtreme") || 0
 highText.textContent="HI "+high
@@ -204,27 +204,10 @@ message.style.display="none"
 playing=true
 
 clearInterval(spawnTimer)
-clearInterval(scoreTimer)
 
 spawnTimer=setInterval(()=>{
 if(playing)createObstacle()
 },spawnRate)
-
-/* 生きているだけでスコア */
-
-scoreTimer=setInterval(()=>{
-
-if(!playing)return
-
-score++
-
-scoreText.textContent=score
-
-if(score%10==0){
-levelUp()
-}
-
-},100)
 
 }
 
@@ -233,7 +216,6 @@ function gameOver(){
 playing=false
 
 clearInterval(spawnTimer)
-clearInterval(scoreTimer)
 
 if(score>high){
 
@@ -244,7 +226,7 @@ localStorage.setItem("gorillaExtreme",high)
 
 highText.textContent="HI "+high
 
-message.innerHTML="GAME OVER<br>Score "+score+"<br><br><button onclick='startGame()'>RETRY</button>"
+message.innerHTML="GAME OVER<br>Score "+Math.floor(score)+"<br><br><button onclick='startGame()'>RETRY</button>"
 message.style.display="block"
 
 }
@@ -256,7 +238,7 @@ level++
 levelText.textContent="LEVEL "+level
 
 fallSpeed+=1
-spawnRate*=0.85
+spawnRate*=0.8
 
 clearInterval(spawnTimer)
 
@@ -267,6 +249,24 @@ if(playing)createObstacle()
 }
 
 function loop(){
+
+if(!playing){
+requestAnimationFrame(loop)
+return
+}
+
+/* スコア増加（進むだけ） */
+
+score+=0.05
+scoreText.textContent=Math.floor(score)
+
+/* レベルアップ */
+
+if(Math.floor(score)%8==0 && Math.floor(score)!=0){
+levelUp()
+}
+
+/* 移動 */
 
 if(moveLeft) velocity-=accel
 if(moveRight) velocity+=accel
@@ -285,9 +285,9 @@ gorilla.style.left=x+"px"
 
 let gRect=gorilla.getBoundingClientRect()
 
-obstacles.forEach(o=>{
+/* 障害物 */
 
-if(!playing)return
+obstacles.forEach(o=>{
 
 o.y+=fallSpeed
 o.o.style.top=o.y+"px"
@@ -302,9 +302,9 @@ gameOver()
 
 obstacles=obstacles.filter(o=>o.y<window.innerHeight)
 
-bananas.forEach((b,i)=>{
+/* バナナ */
 
-if(!playing)return
+bananas.forEach((b,i)=>{
 
 b.y+=fallSpeed
 b.b.style.top=b.y+"px"
@@ -314,7 +314,7 @@ let rect=b.b.getBoundingClientRect()
 if(collide(gRect,rect)){
 
 score+=5
-scoreText.textContent=score
+scoreText.textContent=Math.floor(score)
 
 b.b.remove()
 bananas.splice(i,1)
