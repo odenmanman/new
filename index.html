@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ゴリラ回避ゲーム HARD+</title>
+<title>ゴリラ回避ゲーム EXTREME</title>
 
 <style>
 
@@ -104,6 +104,7 @@ const highText=document.getElementById("high")
 const message=document.getElementById("message")
 
 let x=window.innerWidth/2
+
 let velocity=0
 let accel=0.8
 let friction=0.9
@@ -120,8 +121,10 @@ let level=1
 let playing=false
 
 let fallSpeed=4
-let spawnRate=800
+let spawnRate=900
+
 let spawnTimer
+let scoreTimer
 
 let high=localStorage.getItem("gorillaExtreme") || 0
 highText.textContent="HI "+high
@@ -141,7 +144,7 @@ let ox=Math.random()*(window.innerWidth-40)
 o.style.left=ox+"px"
 o.style.top="-40px"
 
-document.getElementById("game").appendChild(o)
+game.appendChild(o)
 
 obstacles.push({o,x:ox,y:-40})
 
@@ -164,7 +167,7 @@ let bx=Math.random()*(window.innerWidth-40)
 b.style.left=bx+"px"
 b.style.top="-40px"
 
-document.getElementById("game").appendChild(b)
+game.appendChild(b)
 
 bananas.push({b,x:bx,y:-40})
 
@@ -191,7 +194,7 @@ bananas=[]
 score=0
 level=1
 fallSpeed=4
-spawnRate=800
+spawnRate=900
 
 scoreText.textContent=0
 levelText.textContent="LEVEL 1"
@@ -201,10 +204,27 @@ message.style.display="none"
 playing=true
 
 clearInterval(spawnTimer)
+clearInterval(scoreTimer)
 
 spawnTimer=setInterval(()=>{
 if(playing)createObstacle()
 },spawnRate)
+
+/* 生きているだけでスコア */
+
+scoreTimer=setInterval(()=>{
+
+if(!playing)return
+
+score++
+
+scoreText.textContent=score
+
+if(score%10==0){
+levelUp()
+}
+
+},100)
 
 }
 
@@ -213,6 +233,7 @@ function gameOver(){
 playing=false
 
 clearInterval(spawnTimer)
+clearInterval(scoreTimer)
 
 if(score>high){
 
@@ -231,10 +252,11 @@ message.style.display="block"
 function levelUp(){
 
 level++
+
 levelText.textContent="LEVEL "+level
 
 fallSpeed+=1
-spawnRate*=0.9
+spawnRate*=0.85
 
 clearInterval(spawnTimer)
 
@@ -274,19 +296,6 @@ let rect=o.o.getBoundingClientRect()
 
 if(collide(gRect,rect)){
 gameOver()
-}
-
-if(o.y>window.innerHeight){
-
-score++
-scoreText.textContent=score
-
-if(score%15==0){
-levelUp()
-}
-
-o.o.remove()
-
 }
 
 })
