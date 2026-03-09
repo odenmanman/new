@@ -23,8 +23,6 @@ overflow:hidden;
 #gorilla{
 position:absolute;
 bottom:80px;
-left:50%;
-transform:translateX(-50%);
 font-size:50px;
 }
 
@@ -38,13 +36,13 @@ position:absolute;
 font-size:35px;
 }
 
-#score{
+#ui{
 position:absolute;
 top:10px;
 left:10px;
-font-size:24px;
 color:white;
-text-shadow:2px 2px 3px black;
+font-size:22px;
+text-shadow:2px 2px 4px black;
 }
 
 #gameover{
@@ -55,7 +53,7 @@ text-align:center;
 font-size:40px;
 color:white;
 display:none;
-text-shadow:2px 2px 5px black;
+text-shadow:2px 2px 6px black;
 }
 
 #buttons{
@@ -81,7 +79,10 @@ opacity:0.7;
 
 <div id="gorilla">🦍</div>
 
-<div id="score">Score:0</div>
+<div id="ui">
+Score: <span id="score">0</span><br>
+Level: <span id="level">1</span>
+</div>
 
 <div id="gameover">
 GAME OVER<br>
@@ -100,16 +101,26 @@ GAME OVER<br>
 const gorilla=document.getElementById("gorilla")
 const game=document.getElementById("game")
 const scoreText=document.getElementById("score")
+const levelText=document.getElementById("level")
 const gameoverText=document.getElementById("gameover")
 
 let gX=window.innerWidth/2
+let velocity=0
+
+let left=false
+let right=false
+
 let obstacles=[]
 let bananas=[]
 
 let score=0
+let level=1
 let speed=3
+
 let frame=0
 let running=true
+
+gorilla.style.left=gX+"px"
 
 function spawnObstacle(){
 
@@ -161,11 +172,27 @@ if(!running)return
 
 frame++
 
-score+=0.1
+score+=0.2
 
-scoreText.innerText="Score:"+Math.floor(score)
+scoreText.innerText=Math.floor(score)
 
-speed=3+score/200
+level=Math.floor(score/100)+1
+levelText.innerText=level
+
+speed=3+level*0.5
+
+// ゴリラの加速移動
+if(left) velocity-=0.5
+if(right) velocity+=0.5
+
+velocity*=0.9
+
+gX+=velocity
+
+if(gX<0)gX=0
+if(gX>window.innerWidth-40)gX=window.innerWidth-40
+
+gorilla.style.left=gX+"px"
 
 if(frame%60==0){
 spawnObstacle()
@@ -180,10 +207,8 @@ o.y+=speed
 o.el.style.top=o.y+"px"
 
 if(o.y>window.innerHeight){
-
 o.el.remove()
 obstacles.splice(i,1)
-
 }
 
 if(
@@ -205,10 +230,8 @@ b.y+=speed
 b.el.style.top=b.y+"px"
 
 if(b.y>window.innerHeight){
-
 b.el.remove()
 bananas.splice(i,1)
-
 }
 
 if(
@@ -226,31 +249,29 @@ bananas.splice(i,1)
 
 }
 
-gorilla.style.left=gX+"px"
-
 requestAnimationFrame(update)
 
 }
 
-function moveLeft(){
-gX-=20
-if(gX<0)gX=0
-}
-
-function moveRight(){
-gX+=20
-if(gX>window.innerWidth-40)gX=window.innerWidth-40
-}
-
 document.addEventListener("keydown",e=>{
 
-if(e.key=="ArrowLeft")moveLeft()
-if(e.key=="ArrowRight")moveRight()
+if(e.key=="ArrowLeft")left=true
+if(e.key=="ArrowRight")right=true
 
 })
 
-document.getElementById("left").ontouchstart=moveLeft
-document.getElementById("right").ontouchstart=moveRight
+document.addEventListener("keyup",e=>{
+
+if(e.key=="ArrowLeft")left=false
+if(e.key=="ArrowRight")right=false
+
+})
+
+document.getElementById("left").ontouchstart=()=>left=true
+document.getElementById("right").ontouchstart=()=>right=true
+
+document.getElementById("left").ontouchend=()=>left=false
+document.getElementById("right").ontouchend=()=>right=false
 
 function gameOver(){
 
