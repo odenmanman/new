@@ -2,14 +2,14 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>ゴリラ回避ゲーム EXTREME</title>
+<title>飛べゴリラ風ゲーム</title>
 
 <style>
 
 body{
 margin:0;
 overflow:hidden;
-background:#87ceeb;
+background:#87CEEB;
 font-family:sans-serif;
 }
 
@@ -22,57 +22,54 @@ overflow:hidden;
 
 #gorilla{
 position:absolute;
-bottom:40px;
-font-size:52px;
+bottom:80px;
+left:50%;
+transform:translateX(-50%);
+font-size:50px;
 }
 
 .obstacle{
 position:absolute;
-font-size:38px;
+font-size:40px;
 }
 
 .banana{
 position:absolute;
-font-size:34px;
+font-size:35px;
 }
 
 #score{
 position:absolute;
-top:20px;
-left:20px;
+top:10px;
+left:10px;
+font-size:24px;
 color:white;
-font-size:28px;
+text-shadow:2px 2px 3px black;
 }
 
-#level{
+#gameover{
 position:absolute;
-top:60px;
-left:20px;
-color:white;
-}
-
-#high{
-position:absolute;
-top:90px;
-left:20px;
-color:white;
-}
-
-#message{
-position:absolute;
-top:50%;
-left:50%;
-transform:translate(-50%,-50%);
+top:40%;
+width:100%;
 text-align:center;
-color:white;
 font-size:40px;
+color:white;
+display:none;
+text-shadow:2px 2px 5px black;
+}
+
+#buttons{
+position:absolute;
+bottom:10px;
+width:100%;
+display:flex;
+justify-content:space-between;
 }
 
 button{
-font-size:22px;
-padding:10px 20px;
-border:none;
-border-radius:8px;
+font-size:30px;
+padding:20px;
+opacity:0.7;
 }
 
 </style>
@@ -84,13 +81,16 @@ border-radius:8px;
 
 <div id="gorilla">🦍</div>
 
-<div id="score">0</div>
-<div id="level">LEVEL 1</div>
-<div id="high"></div>
+<div id="score">Score:0</div>
 
-<div id="message">
-GORILLA DODGE<br><br>
-<button onclick="startGame()">START</button>
+<div id="gameover">
+GAME OVER<br>
+タップでリスタート
+</div>
+
+<div id="buttons">
+<button id="left">◀</button>
+<button id="right">▶</button>
 </div>
 
 </div>
@@ -98,40 +98,22 @@ GORILLA DODGE<br><br>
 <script>
 
 const gorilla=document.getElementById("gorilla")
+const game=document.getElementById("game")
 const scoreText=document.getElementById("score")
-const levelText=document.getElementById("level")
-const highText=document.getElementById("high")
-const message=document.getElementById("message")
+const gameoverText=document.getElementById("gameover")
 
-let x=window.innerWidth/2
-
-let velocity=0
-let accel=0.8
-let friction=0.9
-let maxSpeed=12
-
-let moveLeft=false
-let moveRight=false
-
+let gX=window.innerWidth/2
 let obstacles=[]
 let bananas=[]
 
 let score=0
-let level=1
-let playing=false
+let speed=3
+let frame=0
+let running=true
 
-let fallSpeed=4
-let spawnRate=900
+function spawnObstacle(){
 
-let spawnTimer
-let scoreTimer
-
-let high=localStorage.getItem("gorillaExtreme") || 0
-highText.textContent="HI "+high
-
-function createObstacle(){
-
-let count=Math.floor(Math.random()*level)+2
+let count=3
 
 for(let i=0;i<count;i++){
 
@@ -139,217 +121,153 @@ let o=document.createElement("div")
 o.className="obstacle"
 o.innerHTML="🧱"
 
-let ox=Math.random()*(window.innerWidth-40)
+let x=Math.random()*(window.innerWidth-40)
 
-o.style.left=ox+"px"
+o.style.left=x+"px"
 o.style.top="-40px"
 
 game.appendChild(o)
 
-obstacles.push({o,x:ox,y:-40})
+obstacles.push({el:o,x:x,y:-40})
 
 }
 
 if(Math.random()<0.5){
-createBanana()
+spawnBanana()
 }
 
 }
 
-function createBanana(){
+function spawnBanana(){
 
 let b=document.createElement("div")
 b.className="banana"
 b.innerHTML="🍌"
 
-let bx=Math.random()*(window.innerWidth-40)
+let x=Math.random()*(window.innerWidth-40)
 
-b.style.left=bx+"px"
+b.style.left=x+"px"
 b.style.top="-40px"
 
 game.appendChild(b)
 
-bananas.push({b,x:bx,y:-40})
+bananas.push({el:b,x:x,y:-40})
 
 }
 
-function collide(a,b){
+function update(){
 
-return !(
-a.right<b.left ||
-a.left>b.right ||
-a.bottom<b.top ||
-a.top>b.bottom
-)
+if(!running)return
+
+frame++
+
+score+=0.1
+
+scoreText.innerText="Score:"+Math.floor(score)
+
+speed=3+score/200
+
+if(frame%60==0){
+spawnObstacle()
+}
+
+for(let i=obstacles.length-1;i>=0;i--){
+
+let o=obstacles[i]
+
+o.y+=speed
+
+o.el.style.top=o.y+"px"
+
+if(o.y>window.innerHeight){
+
+o.el.remove()
+obstacles.splice(i,1)
 
 }
 
-function startGame(){
-
-document.querySelectorAll(".obstacle,.banana").forEach(e=>e.remove())
-
-obstacles=[]
-bananas=[]
-
-score=0
-level=1
-fallSpeed=4
-spawnRate=900
-
-scoreText.textContent=0
-levelText.textContent="LEVEL 1"
-
-message.style.display="none"
-
-playing=true
-
-clearInterval(spawnTimer)
-clearInterval(scoreTimer)
-
-spawnTimer=setInterval(()=>{
-if(playing)createObstacle()
-},spawnRate)
-
-/* 生きているだけでスコア */
-
-scoreTimer=setInterval(()=>{
-
-if(!playing)return
-
-score++
-
-scoreText.textContent=score
-
-if(score%10==0){
-levelUp()
-}
-
-},100)
-
-}
-
-function gameOver(){
-
-playing=false
-
-clearInterval(spawnTimer)
-clearInterval(scoreTimer)
-
-if(score>high){
-
-high=score
-localStorage.setItem("gorillaExtreme",high)
-
-}
-
-highText.textContent="HI "+high
-
-message.innerHTML="GAME OVER<br>Score "+score+"<br><br><button onclick='startGame()'>RETRY</button>"
-message.style.display="block"
-
-}
-
-function levelUp(){
-
-level++
-
-levelText.textContent="LEVEL "+level
-
-fallSpeed+=1
-spawnRate*=0.85
-
-clearInterval(spawnTimer)
-
-spawnTimer=setInterval(()=>{
-if(playing)createObstacle()
-},spawnRate)
-
-}
-
-function loop(){
-
-if(moveLeft) velocity-=accel
-if(moveRight) velocity+=accel
-
-velocity*=friction
-
-if(velocity>maxSpeed) velocity=maxSpeed
-if(velocity<-maxSpeed) velocity=-maxSpeed
-
-x+=velocity
-
-if(x<0)x=0
-if(x>window.innerWidth-40)x=window.innerWidth-40
-
-gorilla.style.left=x+"px"
-
-let gRect=gorilla.getBoundingClientRect()
-
-obstacles.forEach(o=>{
-
-if(!playing)return
-
-o.y+=fallSpeed
-o.o.style.top=o.y+"px"
-
-let rect=o.o.getBoundingClientRect()
-
-if(collide(gRect,rect)){
+if(
+Math.abs(o.x-gX)<40 &&
+o.y>window.innerHeight-140 &&
+o.y<window.innerHeight-80
+){
 gameOver()
 }
 
-})
+}
 
-obstacles=obstacles.filter(o=>o.y<window.innerHeight)
+for(let i=bananas.length-1;i>=0;i--){
 
-bananas.forEach((b,i)=>{
+let b=bananas[i]
 
-if(!playing)return
+b.y+=speed
 
-b.y+=fallSpeed
-b.b.style.top=b.y+"px"
+b.el.style.top=b.y+"px"
 
-let rect=b.b.getBoundingClientRect()
+if(b.y>window.innerHeight){
 
-if(collide(gRect,rect)){
-
-score+=5
-scoreText.textContent=score
-
-b.b.remove()
+b.el.remove()
 bananas.splice(i,1)
 
 }
 
-})
+if(
+Math.abs(b.x-gX)<40 &&
+b.y>window.innerHeight-140 &&
+b.y<window.innerHeight-80
+){
 
-bananas=bananas.filter(b=>b.y<window.innerHeight)
+score+=50
 
-requestAnimationFrame(loop)
+b.el.remove()
+bananas.splice(i,1)
 
+}
+
+}
+
+gorilla.style.left=gX+"px"
+
+requestAnimationFrame(update)
+
+}
+
+function moveLeft(){
+gX-=20
+if(gX<0)gX=0
+}
+
+function moveRight(){
+gX+=20
+if(gX>window.innerWidth-40)gX=window.innerWidth-40
 }
 
 document.addEventListener("keydown",e=>{
-if(e.key==="ArrowLeft") moveLeft=true
-if(e.key==="ArrowRight") moveRight=true
+
+if(e.key=="ArrowLeft")moveLeft()
+if(e.key=="ArrowRight")moveRight()
+
 })
 
-document.addEventListener("keyup",e=>{
-if(e.key==="ArrowLeft") moveLeft=false
-if(e.key==="ArrowRight") moveRight=false
-})
+document.getElementById("left").ontouchstart=moveLeft
+document.getElementById("right").ontouchstart=moveRight
 
-document.addEventListener("click",e=>{
-if(e.clientX<window.innerWidth/2){
-moveLeft=true
-setTimeout(()=>moveLeft=false,100)
-}else{
-moveRight=true
-setTimeout(()=>moveRight=false,100)
+function gameOver(){
+
+running=false
+gameoverText.style.display="block"
+
 }
-})
 
-loop()
+game.onclick=()=>{
+
+if(!running){
+location.reload()
+}
+
+}
+
+update()
 
 </script>
 
